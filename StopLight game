@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# Function to determine payoffs based on player choices
+get_payoff() {
+    player1=$1
+    player2=$2
+
+    # Payoff matrix logic
+    if [[ "$player1" == "S" && "$player2" == "S" ]]; then
+        echo "0 0"   # Both stop, no one gains
+    elif [[ "$player1" == "G" && "$player2" == "S" ]]; then
+        echo "1 0"   # Player 1 wins, Player 2 loses
+    elif [[ "$player1" == "S" && "$player2" == "G" ]]; then
+        echo "0 1"   # Player 2 wins, Player 1 loses
+    elif [[ "$player1" == "G" && "$player2" == "G" ]]; then
+        echo "-10 -10"  # Collision (worst outcome)
+    fi
+}
+
+# Function to check for Nash Equilibrium
+is_nash_equilibrium() {
+    p1=$1
+    p2=$2
+    payoff1=$3
+    payoff2=$4
+
+    # Payoff if Player 1 switches strategy
+    read new_payoff1 _ <<< $(get_payoff "$([[ "$p1" == "G" ]] && echo "S" || echo "G")" "$p2")
+
+    # Payoff if Player 2 switches strategy
+    read _ new_payoff2 <<< $(get_payoff "$p1" "$([[ "$p2" == "G" ]] && echo "S" || echo "G")")
+
+    # Check Nash condition: No player improves their payoff by switching
+    if [[ "$new_payoff1" -le "$payoff1" && "$new_payoff2" -le "$payoff2" ]]; then
+        echo "Yes"
+    else
+        echo "No"
+    fi
+}
+
+# Number of rounds
+rounds=10
+nash_count=0  # Counter for Nash Equilibria
+
+echo "Stoplight Game Simulation"
+echo "--------------------------"
+
+for ((i=1; i<=rounds; i++)); do
+    # Randomly assign "S" (Stop) or "G" (Go) to both players
+    player1_choice=$([[ $((RANDOM % 2)) -eq 0 ]] && echo "S" || echo "G")
+    player2_choice=$([[ $((RANDOM % 2)) -eq 0 ]] && echo "S" || echo "G")
+
+    # Get the payoffs
+    read payoff1 payoff2 <<< $(get_payoff "$player1_choice" "$player2_choice")
+
+    # Check for Nash Equilibrium
+    nash=$(is_nash_equilibrium "$player1_choice" "$player2_choice" "$payoff1" "$payoff2")
+
+    # Count Nash Equilibria
+    [[ "$nash" == "Yes" ]] && ((nash_count++))
+
+    # Print results
+    echo "Round $i: Player 1 -> $player1_choice, Player 2 -> $player2_choice"
+    echo "         Payoffs: ($payoff1, $payoff2)"
+    echo "         Nash Equilibrium: $nash"
+    echo "--------------------------"
+done
+
+# Print final statistics
+echo "Total Nash Equilibria: $nash_count out of $rounds rounds."
